@@ -62,12 +62,13 @@ export default function Sidebar({ sessions, currentSession, onNewChat, onLoadSes
       <div className="px-4 py-3 border-b border-gray-800">
         <label className="text-xs text-gray-500 block mb-1">AI Model</label>
         <select value={model} onChange={e=>onModelChange(e.target.value)}
-          className="w-full text-xs bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-2 py-1.5 outline-none focus:border-purple-500">
+          className="w-full text-xs bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-2 py-1.5 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
           {modelList.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <label className="text-xs text-gray-500 block mb-1 mt-2">Language</label>
         <select value={language} onChange={e=>onLanguageChange(e.target.value)}
-          className="w-full text-xs bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-2 py-1.5 outline-none focus:border-purple-500">
+          aria-label="Select language"
+          className="w-full text-xs bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-2 py-1.5 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
           {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
       </div>
@@ -76,7 +77,8 @@ export default function Sidebar({ sessions, currentSession, onNewChat, onLoadSes
       <div className="px-3 py-2 border-b border-gray-800">
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Search chats..."
-          className="w-full text-xs bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-gray-300 placeholder-gray-600 outline-none focus:border-purple-500" />
+          aria-label="Search chat sessions"
+          className="w-full text-xs bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-gray-300 placeholder-gray-600 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20" />
       </div>
 
       {/* Sessions */}
