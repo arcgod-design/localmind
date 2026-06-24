@@ -1,6 +1,5 @@
 const BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
-// NEW: Handed 'signal' into options unpacking to attach it straight onto fetch
 async function req(path, opts = {}) {
   const { signal, ...restOpts } = opts; // Separate signal from rest of parameters
   const res = await fetch(`${BASE}${path}`, {
@@ -8,6 +7,15 @@ async function req(path, opts = {}) {
     signal, // <--- Attaches the AbortController listener to normal HTTP requests
     ...restOpts,
   });
+
+  const limit = res.headers.get("X-RateLimit-Limit");
+  const remaining = res.headers.get("X-RateLimit-Remaining");
+  if (limit && remaining) {
+    window.dispatchEvent(new CustomEvent("ratelimit-update", { 
+      detail: { limit, remaining } 
+    }));
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "Request failed");
@@ -28,9 +36,11 @@ export const clearMessages = (id) => req(`/sessions/${id}/messages`, { method: "
 export const deleteMessage = (id, messageId) => req(`/sessions/${id}/messages/${messageId}`, { method: "DELETE" });
 export const getDocuments = (id) => req(`/sessions/${id}/documents`);
 export const getModels = () => req("/models/");
+export const getModelInfo = (modelName) => req(`/models/${modelName}/info`);
 export const getOllamaStatus = () => req("/models/status");
 export const getPlugins = () => req("/plugins/");
 export const runPlugin = (b) => req("/plugins/run", { method: "POST", body: JSON.stringify(b) });
+export const getPluginLogs = (limit = 50) => req(`/plugins/logs?limit=${limit}`);
 export const getSettings = () => req("/settings/");
 export const saveSettings = (b) => req("/settings/", { method: "PUT", body: JSON.stringify(b) });
 export const exportSession = (id, fmt) => window.open(`${BASE}/export/${id}/${fmt}`, "_blank");
@@ -49,6 +59,12 @@ export async function uploadDocument(file, session_id) {
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || "Upload failed"); }
   return res.json();
 }
+// Message Reactions API Toggle
+export const toggleMessageReaction = (messageId, emoji) => 
+  req("/chat/messages/toggle-reaction", { 
+    method: "POST", 
+    body: JSON.stringify({ message_id: messageId, emoji }) 
+  });
 
 // NEW: Appended 'signal' parameter right to the tail of your token reader stream
 export function streamMessage(body, onToken, onDone, signal) {
@@ -58,6 +74,13 @@ export function streamMessage(body, onToken, onDone, signal) {
     body: JSON.stringify(body),
     signal // <--- Attaches the cancel token listener directly to your chunk stream reader
   }).then(res => {
+
+    const limit = res.headers.get("X-RateLimit-Limit");
+    const remaining = res.headers.get("X-RateLimit-Remaining");
+    if (limit && remaining) {
+      window.dispatchEvent(new CustomEvent("ratelimit-update", { detail: { limit, remaining } }));
+    }
+
     const reader = res.body.getReader(); const decoder = new TextDecoder();
     function pump() {
       return reader.read().then(({ done, value }) => {
@@ -80,6 +103,7 @@ export function streamMessage(body, onToken, onDone, signal) {
                   doneReceived = true;
                   sourcesList = d.sources || [];
                   onDone({
+                    message_id: d.message_id,
                     sources: sourcesList,
                     benchmarks: d.benchmarks || null
                   });
