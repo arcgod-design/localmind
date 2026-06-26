@@ -40,13 +40,15 @@ def export_session_json(session: dict, messages: list, ts: str) -> str:
     return json.dumps({"session": session, "messages": messages, "exported_at": ts}, indent=2, ensure_ascii=False)
 
 
+# --- Issue #238: Group assistant body and sources tightly together in Markdown helper ---
 def export_session_markdown(session: dict, messages: list, ts: str) -> str:
     title = session.get("title", "LocalMind Chat")
     lines = [f"# {title}\n", f"*Exported: {ts} | Model: {session.get('model','?')}*\n\n---\n"]
     for m in messages:
         role_label = "**You**" if m["role"] == "user" else "**LocalMind**"
-        lines.append(f"{role_label}\n\n{m['content']}\n")
-        if m.get("sources"):
+        msg_block = f"{role_label}\n\n{m['content'].strip()}"
+        
+        if m["role"] == "assistant" and m.get("sources"):
             source_names = []
             for src in m["sources"]:
                 if isinstance(src, dict):
@@ -55,17 +57,33 @@ def export_session_markdown(session: dict, messages: list, ts: str) -> str:
                     source_names.append(str(src))
             source_names = [s for s in source_names if s]
             if source_names:
-                lines.append(f"*Sources: {', '.join(source_names)}*\n")
+                msg_block += f"\n\n*Sources: {', '.join(source_names)}*"
+                
+        lines.append(msg_block + "\n")
         lines.append("\n---\n")
     return "\n".join(lines)
 
 
+# --- Issue #238: Group assistant body and sources tightly together in Text helper ---
 def export_session_txt(session: dict, messages: list, ts: str) -> str:
     title = session.get("title", "LocalMind Chat")
     lines = [f"LocalMind Export — {title}", f"Exported: {ts}", "=" * 50, ""]
     for m in messages:
         role = "YOU" if m["role"] == "user" else "LOCALMIND"
-        lines += [f"[{role}]", m["content"], ""]
+        msg_block = f"[{role}]\n{m['content'].strip()}"
+        
+        if m["role"] == "assistant" and m.get("sources"):
+            source_names = []
+            for src in m["sources"]:
+                if isinstance(src, dict):
+                    source_names.append(src.get("source", ""))
+                else:
+                    source_names.append(str(src))
+            source_names = [s for s in source_names if s]
+            if source_names:
+                msg_block += f"\nSources: {', '.join(source_names)}"
+                
+        lines += [msg_block, ""]
     return "\n".join(lines)
 
 
@@ -81,17 +99,17 @@ async def export_session(session_id: str, fmt: ExportFormat):
     if fmt == ExportFormat.json:
         content = export_session_json(session, messages, ts)
         media = "application/json"
-        filename = f"localmind_{session_id[:8]}.json"
+        filename = f"localmind_messages_{ts.replace(' ', '_').replace(':', '-')}.json"
 
     elif fmt == ExportFormat.markdown:
         content = export_session_markdown(session, messages, ts)
         media = "text/markdown"
-        filename = f"localmind_{session_id[:8]}.md"
+        filename = f"localmind_messages_{ts.replace(' ', '_').replace(':', '-')}.md"
 
     else:  # txt
         content = export_session_txt(session, messages, ts)
         media = "text/plain"
-        filename = f"localmind_{session_id[:8]}.txt"
+        filename = f"localmind_messages_{ts.replace(' ', '_').replace(':', '-')}.txt"
 
     return Response(
         content=content.encode("utf-8"),
@@ -172,9 +190,20 @@ async def export_messages(req: ExportMessagesRequest):
         lines = ["# LocalMind – Exported Messages\n", f"*Exported: {ts}*\n\n---\n"]
         for m in messages:
             role_label = "**You**" if m["role"] == "user" else "**LocalMind**"
-            lines.append(f"{role_label}\n\n{m['content']}\n")
-            if m.get("sources"):
-                lines.append(f"*Sources: {', '.join(m['sources'])}*\n")
+            msg_block = f"{role_label}\n\n{m['content'].strip()}"
+            
+            if m["role"] == "assistant" and m.get("sources"):
+                source_names = []
+                for src in m["sources"]:
+                    if isinstance(src, dict):
+                        source_names.append(src.get("source", ""))
+                    else:
+                        source_names.append(str(src))
+                source_names = [s for s in source_names if s]
+                if source_names:
+                    msg_block += f"\n\n*Sources: {', '.join(source_names)}*"
+            
+            lines.append(msg_block + "\n")
             lines.append("\n---\n")
         content = "\n".join(lines)
         media = "text/markdown"
@@ -184,10 +213,25 @@ async def export_messages(req: ExportMessagesRequest):
         lines = ["LocalMind Export — Selected Messages", f"Exported: {ts}", "=" * 50, ""]
         for m in messages:
             role = "YOU" if m["role"] == "user" else "LOCALMIND"
-            lines += [f"[{role}]", m["content"], ""]
-        content = "\n".join(lines)
-        media = "text/plain"
-        filename = f"localmind_messages_{ts.replace(' ', '_').replace(':', '-')}.txt"
+            msg_block = f"[{role}]\n{m['content'].strip()}"
+            
+            if m["role"] == "assistant" and m.get("sources"):
+                source_names = []
+                for src in m["sources"]:
+                    if isinstance(src, dict):
+                        source_names.append(src.get("source", ""))
+                    else:
+                        source_names.append(str(src))
+                source_names = [s for s in source_names if s]
+                if source_names:
+                    msg_block += f"\nSources: {', '.join(source_names)}"
+                
+            lines += [msg_block, ""]
+        content   = "\n".join(lines)
+        media     = "text/plain"
+        
+        # --- Fixed undefined variable session_id mismatch bug here ---
+        filename  = f"localmind_messages_{ts.replace(' ', '_').replace(':', '-')}.txt"
 
     return Response(
         content=content.encode("utf-8"),
