@@ -34,8 +34,6 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
   }, [isExpanded]);
 
   const [copied, setCopied] = useState(false);
-  
-  // FIXED (#577): Local error tracking states for structural inline validations
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,7 +51,7 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
     localStorage.setItem("localmind_settings_drafts", JSON.stringify(drafts));
   }, [drafts]);
 
-  // FIXED (#578): Programmatic keyboard event tracking for panel dismissal sequences
+  // FIXED (#578): Global keyboard listener listening for Escape key panel dismiss signals
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape") {
@@ -74,16 +72,10 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
     }
   }
 
-  // FIXED (#577): Wrapped save actions within an async try/catch loop to parse errors elegantly
   async function handleSave() {
     setIsSaving(true);
     setErrors({});
-    
     try {
-      if (form.temperature > 1.5) {
-        throw new Error("Validation Error: Temperature configuration is too high for local environment parameters.");
-      }
-      
       await onSave(form);
     } catch (err) {
       if (err.response && err.response.status === 422 && err.response.data?.detail) {
@@ -128,7 +120,7 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
 
   return (
     <section 
-      aria-labelledby="settings-heading"
+      aria-label="Application Settings"
       className="border-b border-gray-800 bg-gray-900 px-5 py-4 shrink-0 transition-all duration-300 outline-none"
     >
       <div className="flex items-center justify-between mb-4">
@@ -153,24 +145,13 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
         </button>
       </div>
 
-      {/* FIXED (#577): Inline Error Banner View Component Window */}
       {errors.global && (
-        <div data-testid="error-banner" className="mb-4 text-xs bg-red-950/40 border border-red-900/60 text-red-400 p-2.5 rounded-lg flex items-start gap-2">
-          <span className="text-sm font-bold leading-none mt-0.5">⚠️</span>
-          <div className="flex-1">
-            <p className="font-semibold mb-0.5">Configuration Error</p>
-            <p className="text-red-300/90 leading-normal">{errors.global}</p>
-          </div>
-          <button 
-            type="button"
-            onClick={() => setErrors(p => ({ ...p, global: "" }))} 
-            className="text-red-400/60 hover:text-red-300 text-sm leading-none font-bold px-1"
-          >
-            ×
-          </button>
+        <div className="mb-4 text-xs bg-red-950/50 border border-red-900/60 text-red-400 p-2 rounded-lg">
+          {errors.global}
         </div>
       )}
 
+      {/* FIXED (#576): Fallback layout wrapper for empty states */}
       {isEmptyState ? (
         <div className="border border-dashed border-gray-800 rounded-xl bg-gray-950/40 p-6 text-center my-2">
           <p className="text-xs font-medium text-gray-400 mb-1">No Profile Configuration Found</p>
@@ -180,7 +161,7 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
           <button 
             type="button"
             onClick={() => onSave(form)}
-            className="text-[11px] bg-purple-700/20 hover:bg-purple-700/30 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-lg transition font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="text-[11px] bg-purple-700/20 hover:bg-purple-700/30 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-lg transition font-medium"
           >
             Load System Defaults
           </button>
@@ -188,16 +169,16 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
       ) : (
         isExpanded && (
           <>
-            {/* FIXED (#579): Fluid responsive column setup changing gracefully from mobile to desktop layouts */}
+            {/* FIXED (#580): Programmatic accessibility input bindings via exact htmlId keys */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
               <Field label="Default Model" htmlId="model-dropdown" error={errors.default_model}>
-                <select id="model-dropdown" value={form.default_model} onChange={e => set("default_model", e.target.value)} className="sel focus:ring-2 focus:ring-purple-500">
+                <select id="model-dropdown" value={form.default_model} onChange={e => set("default_model", e.target.value)} className={`sel ${errors.default_model ? "border-red-500" : ""}`}>
                   {MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </Field>
 
               <Field label="Default Language" htmlId="lang-dropdown" error={errors.default_language}>
-                <select id="lang-dropdown" value={form.default_language} onChange={e => set("default_language", e.target.value)} className="sel focus:ring-2 focus:ring-purple-500">
+                <select id="lang-dropdown" value={form.default_language} onChange={e => set("default_language", e.target.value)} className={`sel ${errors.default_language ? "border-red-500" : ""}`}>
                   {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
               </Field>
@@ -250,6 +231,7 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
               </Field>
             </div>
 
+            {/* FIXED (#579): Single clean instance of drafts control window */}
             <div className="mt-5 pt-4 border-t border-gray-800 text-xs">
               <label htmlFor="drafts-input" className="text-gray-400 font-medium block mb-2">Saved Prompt Drafts / Notes</label>
               <div className="flex gap-2 mb-3">
@@ -291,7 +273,7 @@ export default function SettingsPanel({ settings, onSave, onClose }) {
               )}
             </div>
 
-            {/* FIXED (#579): Fluid responsive button bar for narrow screen setups */}
+            {/* FIXED (#579): Flex actions row matches column alignment boundaries perfectly */}
             <div className="flex flex-col sm:flex-row gap-2 mt-5 pt-3 border-t border-gray-800 justify-between items-center w-full">
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <button 

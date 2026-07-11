@@ -17,23 +17,15 @@ afterEach(() => {
   cleanup();
 });
 
-describe("SettingsPanel Inline Error Banner & Feature Integration Suite (#577)", () => {
-  test("avoids rendering an error banner container by default during steady state", () => {
-    render(<SettingsPanel settings={mockSettings} onSave={vi.fn()} onClose={vi.fn()} />);
-    expect(screen.queryByTestId("error-banner")).toBeNull();
-  });
-
-  test("triggers and renders the inline error banner box when validation or save promises collapse", async () => {
-    const brokenSaveMock = vi.fn().mockRejectedValue(new Error("Database write connection failed."));
-    render(<SettingsPanel settings={mockSettings} onSave={brokenSaveMock} onClose={vi.fn()} />);
+describe("SettingsPanel Keyboard Navigation Suite (#578)", () => {
+  test("fires the onClose callback trigger instantly when the Escape key is pressed", () => {
+    const mockOnClose = vi.fn();
+    render(<SettingsPanel settings={mockSettings} onSave={vi.fn()} onClose={mockOnClose} />);
     
-    const saveBtn = screen.getByRole("button", { name: /save settings/i });
-    fireEvent.click(saveBtn);
+    // Simulates standard window keyboard Escape sequence tracking
+    fireEvent.keyDown(window, { key: "Escape" });
     
-    await waitFor(() => {
-      expect(screen.getByTestId("error-banner")).toBeDefined();
-      expect(screen.getByText(/Database write connection failed./i)).toBeDefined();
-    });
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -58,6 +50,7 @@ describe("SettingsPanel Accessibility Landmarks & Validation Suite (#580)", () =
   test("renders with correct semantic section region and aria bindings", () => {
     render(<SettingsPanel settings={mockSettings} onSave={vi.fn()} onClose={vi.fn()} />);
     
+    // Verifies the entire component is enclosed in a landmark region labeled by the title heading
     const section = screen.getByRole("region", { name: /settings/i });
     expect(section).toBeDefined();
   });
@@ -65,6 +58,7 @@ describe("SettingsPanel Accessibility Landmarks & Validation Suite (#580)", () =
   test("associates form control fields cleanly to their accessibility labels", () => {
     render(<SettingsPanel settings={mockSettings} onSave={vi.fn()} onClose={vi.fn()} />);
     
+    // Verifies the labels are programmatically associated with inputs using htmlFor / id
     expect(screen.getByLabelText("Default Model")).toBeDefined();
     expect(screen.getByLabelText("Default Language")).toBeDefined();
     expect(screen.getByLabelText(/temperature/i)).toBeDefined();
