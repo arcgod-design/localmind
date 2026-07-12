@@ -16,6 +16,28 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("UploadPanel Keyboard Navigation Accessibility Suite (#567)", () => {
+  test("fires onClose event handler cleanly when hitting the Escape key", () => {
+    const mockOnClose = vi.fn();
+    render(<UploadPanel sessionId="test-session" documents={[]} onUploaded={vi.fn()} onClose={mockOnClose} show={true} />);
+    
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("makes drop zone interactive and focusable with keyboard event binds", () => {
+    render(<UploadPanel sessionId="test-session" documents={[]} onUploaded={vi.fn()} onClose={vi.fn()} show={true} />);
+    
+    const dropzone = screen.getByRole("button", { name: /File upload drop zone/i });
+    expect(dropzone).toBeDefined();
+    expect(dropzone.tabIndex).toBe(0);
+
+    // Verify key triggers do not crash execution boundaries
+    fireEvent.keyDown(dropzone, { key: "Enter" });
+    fireEvent.keyDown(dropzone, { key: " " });
+  });
+});
+
 describe("UploadPanel Global Error Banner Interface Suite (#566)", () => {
   test("avoids compiling alert nodes inside default view frames", () => {
     render(<UploadPanel sessionId="session-123" documents={[]} onUploaded={vi.fn()} onClose={vi.fn()} show={true} />);
@@ -30,7 +52,6 @@ describe("UploadPanel Global Error Banner Interface Suite (#566)", () => {
     const file = new File(["test data payload"], "matrix.txt", { type: "text/plain" });
     const dropzone = screen.getByText(/Drop files here or click to browse/i);
     
-    // Simulate drops by passing standard file attachments
     fireEvent.drop(dropzone, {
       dataTransfer: { files: [file] }
     });
@@ -70,10 +91,6 @@ function makeFile(name) {
 describe("UploadPanel multi-select upload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("renders the file input with the multiple attribute", () => {
