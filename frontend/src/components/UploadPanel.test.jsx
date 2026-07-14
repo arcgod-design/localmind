@@ -16,6 +16,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("UploadPanel Accessibility Landmarks Suite (#569)", () => {
+  test("contains accessible section landmarks and titles", () => {
+    render(<UploadPanel sessionId="session-123" documents={[]} onUploaded={() => {}} onClose={() => {}} show={true} />);
+    
+    // Verifies the presence of a section container that is properly labeled by a header item
+    const panelSection = screen.getByRole("region", { name: /documents/i });
+    expect(panelSection).toBeDefined();
+  });
+
+  test("includes a live region wrapper with role status for operational reports", () => {
+    render(<UploadPanel sessionId="session-123" documents={[]} onUploaded={() => {}} onClose={() => {}} show={true} />);
+    
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toBeDefined();
+  });
+});
+
 describe("UploadPanel Mobile and Responsive Layout Layout Suite (#568)", () => {
   test("implements mobile view responsive fluid layout classes", () => {
     const { container } = render(
