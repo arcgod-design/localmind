@@ -10,6 +10,7 @@ import * as api from "../utils/api";
 vi.mock("../utils/api", () => ({
   getPlugins: vi.fn(),
   runPlugin: vi.fn(),
+  getPluginLogs: vi.fn().mockResolvedValue({ logs: [] }),
 }));
 
 // Mock icons
@@ -29,6 +30,33 @@ const mockPluginsList = [
   { id: "summarizer", name: "Summarizer", icon: "summarizer", description: "Summarize provided text" },
 ];
 
+describe("PluginsPanel Tooltip Help Suite (#593)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.getPlugins.mockResolvedValue({ plugins: mockPluginsList });
+    api.getPluginLogs.mockResolvedValue({ logs: [] });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("renders the plugins panel header title and info tooltip icon", async () => {
+    render(<PluginsPanel sessionId="test-session" onClose={vi.fn()} />);
+
+    expect(screen.getByText(/Plugins/i)).toBeInTheDocument();
+
+    // Verify info button trigger renders
+    const helpButton = screen.getByLabelText(/Plugins panel information description/i);
+    expect(helpButton).toBeInTheDocument();
+    expect(helpButton.textContent.trim()).toBe("i");
+
+    // Verify tooltip text is rendered in DOM
+    const helpText = screen.getByText(/Plugins Workspace Help:/i);
+    expect(helpText).toBeInTheDocument();
+  });
+});
+
 describe("PluginsPanel View State & Persistence Suite (#592)", () => {
   let store = {};
 
@@ -43,6 +71,7 @@ describe("PluginsPanel View State & Persistence Suite (#592)", () => {
     });
 
     api.getPlugins.mockResolvedValue({ plugins: mockPluginsList });
+    api.getPluginLogs.mockResolvedValue({ logs: [] });
   });
 
   afterEach(() => {
